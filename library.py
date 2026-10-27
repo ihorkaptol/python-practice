@@ -3,17 +3,22 @@ from abc import ABC, abstractmethod
 class LibraryError(Exception):
     pass
 
+
 class ItemNotFoundError(LibraryError):
     pass
+
 
 class ItemNotAvailableError(LibraryError):
     pass
 
+
 class LimitExceededError(LibraryError):
     pass
 
+
 class MemberNotFoundError(LibraryError):
     pass
+
 
 class LibraryItem(ABC):
     total_created = 0
@@ -41,6 +46,8 @@ class LibraryItem(ABC):
         return hash(self.item_id)
 
     def __lt__(self, other):
+        if not isinstance(other, LibraryItem):
+            return NotImplemented
         return (self.year, self.title) < (other.year, other.title)
 
 
@@ -57,6 +64,7 @@ class Book(LibraryItem):
     def __str__(self):
         return f"{self.title} - {self.author} ({self.year})"
 
+
 class Magazine(LibraryItem):
 
     def __init__(self, item_id, title, year, issue, is_available=True):
@@ -69,6 +77,7 @@ class Magazine(LibraryItem):
     def __str__(self):
         return f"{self.title} #{self.issue} ({self.year})"
 
+
 class DVD(LibraryItem):
 
     def __init__(self, item_id, title, year, duration_min, is_available=True):
@@ -80,6 +89,7 @@ class DVD(LibraryItem):
 
     def __str__(self):
         return f"{self.title} [DVD, {self.duration_min} min] ({self.year})"
+
 
 class Member:
     MAX_ITEMS = 3
@@ -94,6 +104,7 @@ class Member:
 
     def __str__(self):
         return f"{self.name} (items: {len(self.borrowed_items)}/{self.MAX_ITEMS})"
+
 
 class Library:
     def __init__(self, name):
@@ -110,6 +121,8 @@ class Library:
         self.items[item.item_id] = item
 
     def add_member(self, member):
+        if member.member_id in self.members:
+            raise LibraryError(f"Member '{member.member_id}' already exists")
         self.members[member.member_id] = member
 
     def lend_item(self, item_id, member_id):
@@ -121,17 +134,18 @@ class Library:
 
         item = self.items[item_id]
 
-        if  not item.is_available:
+        if not item.is_available:
             raise ItemNotAvailableError(f"Item '{item_id}' is not available")
 
         member = self.members[member_id]
 
-        if  not member.can_borrow():
+        if not member.can_borrow():
             raise LimitExceededError(f"{member.name} has reached the limit of {Member.MAX_ITEMS}")
         item.is_available = False
         member.borrowed_items.append(item)
-        self.history.append(f"{member.name} has borrowed {item} for {item.loan_days()} days")
-        return f"{member.name} borrowed {item} for {item.loan_days()} days"
+        message = f"{member.name} has borrowed {item} for {item.loan_days()} days"
+        self.history.append(message)
+        return message
 
     def return_item(self, item_id, member_id):
         if member_id not in self.members:
@@ -148,18 +162,19 @@ class Library:
 
         item.is_available = True
         member.borrowed_items.remove(item)
-        self.history.append(f"{member.name} has returned {item}")
-        return f"{member.name} has returned {item}"
+        message = f"{member.name} has returned {item}"
+        self.history.append(message)
+        return message
 
     def available_items(self):
-        return sorted([item for item in self.items.values() if item.is_available])
+        return sorted(item for item in self.items.values() if item.is_available)
 
     def find_by_author(self, author):
         query = author.strip().lower()
         return [item for item in self.items.values() if isinstance(item, Book) and item.author.lower().strip() == query]
 
     def get_history(self):
-        return  "History:\n" + "\n".join(self.history)
+        return "History:\n" + "\n".join(self.history)
 
     def __str__(self):
         return f'Library "{self.name}": {len(self.items)} items, {len(self.members)} members'
@@ -169,6 +184,7 @@ class Library:
 
     def __contains__(self, item_id):
         return item_id in self.items
+
 
 def section(title):
     print(f"\n=== {title} ===")

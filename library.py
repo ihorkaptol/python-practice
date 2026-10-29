@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import date
 
 class LibraryError(Exception):
     pass
@@ -24,11 +25,46 @@ class LibraryItem(ABC):
     total_created = 0
 
     def __init__(self, item_id, title, year, is_available=True):
-        self.item_id = item_id
+        self._item_id = item_id
         self.title = title
         self.year = year
         self.is_available = is_available
         LibraryItem.total_created += 1
+
+    @staticmethod
+    def normalize_text(text):
+        return " ".join(text.split())
+
+    @property
+    def item_id(self):
+        return self._item_id
+
+    @property
+    def title(self):
+        return self._title
+
+    @title.setter
+    def title(self, value):
+        if not isinstance(value, str):
+            raise TypeError(f'Title must be str, got {type(value).__name__}')
+
+        normalized_title = self.normalize_text(value)
+
+        if normalized_title == "":
+            raise ValueError("Title can't be empty")
+        self._title = normalized_title
+
+    @property
+    def year(self):
+        return self._year
+
+    @year.setter
+    def year(self, value):
+        if not isinstance(value, int):
+            raise TypeError(f'Year must be int, got {type(value).__name__}')
+        if  date.today().year < value or value < 1450:
+            raise ValueError(f'Invalid year: {value}')
+        self._year = value
 
     @abstractmethod
     def loan_days(self):

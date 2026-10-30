@@ -197,35 +197,34 @@ class Member:
 class Library:
     def __init__(self, name):
         self.name = name
-        self.items = {}
-        self.members = {}
-        self.history = []
+        self._items = {}
+        self._members = {}
+        self._history = []
 
     def add_item(self, item):
         if not isinstance(item, LibraryItem):
             raise TypeError(f"Expected LibraryItem, got {type(item).__name__}")
-        if item.item_id in self.items:
+        if item.item_id in self._items:
             raise LibraryError(f"Item '{item.item_id}' already exists")
-        self.items[item.item_id] = item
+        self._items[item.item_id] = item
 
     def add_member(self, member):
-        if member.member_id in self.members:
+        if member.member_id in self._members:
             raise LibraryError(f"Member '{member.member_id}' already exists")
-        self.members[member.member_id] = member
+        self._members[member.member_id] = member
 
     def lend_item(self, item_id, member_id):
-        if member_id not in self.members:
-            raise MemberNotFoundError(f"Member '{member_id}' not found")
+        self.get_member(member_id)
 
-        if item_id not in self.items:
+        if item_id not in self._items:
             raise ItemNotFoundError(f"Item '{item_id}' not found")
 
-        item = self.items[item_id]
+        item = self._items[item_id]
 
         if not item.is_available:
             raise ItemNotAvailableError(f"Item '{item_id}' is not available")
 
-        member = self.members[member_id]
+        member = self._members[member_id]
 
         if not member.can_borrow:
             raise LimitExceededError(f"{member.name} has reached the limit of {Member.MAX_ITEMS}")
@@ -233,18 +232,17 @@ class Library:
         member.add_item(item)
         item.check_out()
         message = f"{member.name} has borrowed {item} for {item.loan_days()} days"
-        self.history.append(message)
+        self._history.append(message)
         return message
 
     def return_item(self, item_id, member_id):
-        if member_id not in self.members:
-            raise MemberNotFoundError(f"Member '{member_id}' not found")
+        self.get_member(member_id)
 
-        if item_id not in self.items:
+        if item_id not in self._items:
             raise ItemNotFoundError(f"Item '{item_id}' not found")
 
-        item = self.items[item_id]
-        member = self.members[member_id]
+        item = self._items[item_id]
+        member = self._members[member_id]
 
         if item not in member.borrowed_items:
             raise LibraryError(f"Member {member.name} hasn't borrowed {item}")
@@ -252,27 +250,50 @@ class Library:
         member.remove_item(item)
         item.check_in()
         message = f"{member.name} has returned {item}"
-        self.history.append(message)
+        self._history.append(message)
         return message
 
     def available_items(self):
-        return sorted(item for item in self.items.values() if item.is_available)
+        return sorted(item for item in self._items.values() if item.is_available)
 
     def find_by_author(self, author):
-        query = author.strip().lower()
-        return [item for item in self.items.values() if isinstance(item, Book) and item.author.lower().strip() == query]
+        query = LibraryItem.normalize_text(author).lower()
+        return [item for item in self._items.values() if isinstance(item, Book) and LibraryItem.normalize_text(item.author).lower() == query]
 
     def get_history(self):
-        return "History:\n" + "\n".join(self.history)
+        return "History:\n" + "\n".join(self._history)
+
+    @property
+    def items(self):
+        return tuple(self._items.values())
+
+    @property
+    def members(self):
+        return tuple(self._members.values())
+
+    @property
+    def history(self):
+        return tuple(self._history)
+
+
+    def get_member(self, member_id):
+        if member_id not in self._members:
+            raise MemberNotFoundError(f"Member '{member_id}' not found")
+        return self._members[member_id]
+
+    def get_item(self, item_id):
+        if item_id not in self._items:
+            raise ItemNotFoundError(f"Item '{item_id}' not found")
+        return self._items[item_id]
 
     def __str__(self):
-        return f'Library "{self.name}": {len(self.items)} items, {len(self.members)} members'
+        return f'Library "{self.name}": {len(self._items)} items, {len(self._members)} members'
 
     def __len__(self):
-        return len(self.items)
+        return len(self._items)
 
     def __contains__(self, item_id):
-        return item_id in self.items
+        return item_id in self._items
 
 
 def section(title):
@@ -343,7 +364,7 @@ if __name__ == "__main__":
     print(lib.return_item(100, 200))
 
     section("Members")
-    for member in lib.members.values():
+    for member in lib.members:  # було: lib.members.values()
         print(member)
 
     section("Available (sorted by year, then title)")
@@ -358,9 +379,9 @@ if __name__ == "__main__":
 
     section("Magic methods")
     copy = Book(100, "Kobzar (copy)", "Taras Shevchenko", 1840)
-    print("Same item:", copy == lib.items[100])
-    print("In a set:", len({copy, lib.items[100]}))
-    print(repr(lib.items["M1"]))
+    print("Same item:", copy == lib.get_item(100))  # було: lib.items[100]
+    print("In a set:", len({copy, lib.get_item(100)}))
+    print(repr(lib.get_item("M1")))  # було: lib.items["M1"]
 
     section("History")
     print(lib.get_history())

@@ -114,6 +114,14 @@ class Book(LibraryItem):
     def __str__(self):
         return f"{self.title} - {self.author} ({self.year})"
 
+    @classmethod
+    def from_string(cls, line):
+        parts = line.split(";")
+        if len(parts) != 4:
+            raise ValueError(f"Expected 4 fields, got {len(parts)} : {line!r}")
+        isbn, title, author, year = parts
+        return cls(int(isbn), title, author.strip(), int(year))
+
 
 class Magazine(LibraryItem):
 
@@ -214,17 +222,11 @@ class Library:
         self._members[member.member_id] = member
 
     def lend_item(self, item_id, member_id):
-        self.get_member(member_id)
-
-        if item_id not in self._items:
-            raise ItemNotFoundError(f"Item '{item_id}' not found")
-
-        item = self._items[item_id]
+        member = self.get_member(member_id)
+        item = self.get_item(item_id)
 
         if not item.is_available:
             raise ItemNotAvailableError(f"Item '{item_id}' is not available")
-
-        member = self._members[member_id]
 
         if not member.can_borrow:
             raise LimitExceededError(f"{member.name} has reached the limit of {Member.MAX_ITEMS}")
@@ -236,13 +238,8 @@ class Library:
         return message
 
     def return_item(self, item_id, member_id):
-        self.get_member(member_id)
-
-        if item_id not in self._items:
-            raise ItemNotFoundError(f"Item '{item_id}' not found")
-
-        item = self._items[item_id]
-        member = self._members[member_id]
+        member = self.get_member(member_id)
+        item = self.get_item(item_id)
 
         if item not in member.borrowed_items:
             raise LibraryError(f"Member {member.name} hasn't borrowed {item}")
@@ -303,11 +300,14 @@ def section(title):
 if __name__ == "__main__":
     section("Setup")
     lib = Library("Central Library")
-    lib.add_item(Book(100, "Kobzar", "Taras Shevchenko", 1840))
-    lib.add_item(Book(101, "Zakhar Berkut", "Ivan Franko", 1883))
-    lib.add_item(Book(102, "Lisova pisnia", "Lesya Ukrainka", 1911))
-    lib.add_item(Book(103, "Tyhrolovy", "Ivan Bahrianyi", 1944))
-    lib.add_item(Book(105, "Eneida", "Ivan Kotliarevsky", 1798))
+    BOOK_LINES = ["100; Kobzar ; Taras Shevchenko; 1840",
+                     "101;Zakhar Berkut;Ivan Franko;1883",
+                     "102;Lisova pisnia;Lesya Ukrainka;1911",
+                     "103;Tyhrolovy;Ivan Bahrianyi;1944",
+                     "105;Eneida;Ivan Kotliarevsky;1798"]
+    for line in BOOK_LINES:
+        lib.add_item(Book.from_string(line))
+
     lib.add_item(Magazine("M1", "Ukrainskyi Tyzhden", 2024, 42))
     lib.add_item(DVD("D1", "Tini zabutykh predkiv", 1965, 97))
 

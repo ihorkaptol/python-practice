@@ -145,12 +145,50 @@ class Member:
     MAX_ITEMS = 3
 
     def __init__(self, member_id, name):
-        self.member_id = member_id
+        self._member_id = member_id
         self.name = name
-        self.borrowed_items = []
+        self._borrowed_items = []
 
+    @property
+    def member_id(self):
+        return self._member_id
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        if not isinstance(value, str):
+            raise TypeError(f'Member name must be str, got {type(value).__name__}')
+
+        normalized_name = LibraryItem.normalize_text(value)
+
+        if normalized_name == "":
+            raise ValueError("Name can't be empty")
+        self._name = normalized_name
+
+    @property
+    def borrowed_items(self):
+        return tuple(self._borrowed_items)
+
+    def add_item(self, item):
+        if not self.can_borrow:
+            raise LimitExceededError(f"Member '{self.name}' has reached the limit of {self.MAX_ITEMS}")
+        self._borrowed_items.append(item)
+
+    def remove_item(self, item):
+        if item not in self._borrowed_items:
+            raise LibraryError(f"{self.name} hasn't borrowed {item}")
+        self._borrowed_items.remove(item)
+
+    @property
+    def items_left(self):
+        return self.MAX_ITEMS - len(self._borrowed_items)
+
+    @property
     def can_borrow(self):
-        return len(self.borrowed_items) < self.MAX_ITEMS
+        return self.items_left > 0
 
     def __str__(self):
         return f"{self.name} (items: {len(self.borrowed_items)}/{self.MAX_ITEMS})"
@@ -189,10 +227,11 @@ class Library:
 
         member = self.members[member_id]
 
-        if not member.can_borrow():
+        if not member.can_borrow:
             raise LimitExceededError(f"{member.name} has reached the limit of {Member.MAX_ITEMS}")
+
+        member.add_item(item)
         item.check_out()
-        member.borrowed_items.append(item)
         message = f"{member.name} has borrowed {item} for {item.loan_days()} days"
         self.history.append(message)
         return message
@@ -210,8 +249,8 @@ class Library:
         if item not in member.borrowed_items:
             raise LibraryError(f"Member {member.name} hasn't borrowed {item}")
 
+        member.remove_item(item)
         item.check_in()
-        member.borrowed_items.remove(item)
         message = f"{member.name} has returned {item}"
         self.history.append(message)
         return message

@@ -28,7 +28,7 @@ class LibraryItem(ABC):
         self._item_id = item_id
         self.title = title
         self.year = year
-        self.is_available = is_available
+        self._is_available = is_available
         LibraryItem.total_created += 1
 
     @staticmethod
@@ -65,6 +65,20 @@ class LibraryItem(ABC):
         if  date.today().year < value or value < 1450:
             raise ValueError(f'Invalid year: {value}')
         self._year = value
+
+    @property
+    def is_available(self):
+        return self._is_available
+
+    def check_out(self):
+        if not self.is_available:
+            raise ItemNotAvailableError(f"Item '{self.item_id}' is not available")
+        self._is_available = False
+
+    def check_in(self):
+        if self.is_available:
+            raise LibraryError(f"Item '{self.item_id}' is not lent out")
+        self._is_available = True
 
     @abstractmethod
     def loan_days(self):
@@ -177,7 +191,7 @@ class Library:
 
         if not member.can_borrow():
             raise LimitExceededError(f"{member.name} has reached the limit of {Member.MAX_ITEMS}")
-        item.is_available = False
+        item.check_out()
         member.borrowed_items.append(item)
         message = f"{member.name} has borrowed {item} for {item.loan_days()} days"
         self.history.append(message)
@@ -196,7 +210,7 @@ class Library:
         if item not in member.borrowed_items:
             raise LibraryError(f"Member {member.name} hasn't borrowed {item}")
 
-        item.is_available = True
+        item.check_in()
         member.borrowed_items.remove(item)
         message = f"{member.name} has returned {item}"
         self.history.append(message)

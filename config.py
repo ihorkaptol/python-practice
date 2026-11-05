@@ -1,8 +1,18 @@
 import json
+import time
 from pathlib import Path
 
 class ConfigError(Exception):
     pass
+
+class Timer:
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.elapsed = time.perf_counter() - self.start
+        return False
 
 def save_config(path, config):
     with open(path, "w", encoding="utf-8") as f:
@@ -41,3 +51,13 @@ if __name__ == "__main__":
         load_config("list.json", DEFAULTS)
     except ConfigError as e:
         print(f"ConfigError: {e} | cause: {type(e.__cause__).__name__}")
+
+    with Timer() as t:
+        total = sum(range(1_000_000))
+    print(total, f"took {t.elapsed:.3f} s")
+
+    try:
+        with Timer() as t:
+            1 / 0
+    except ZeroDivisionError:
+        print("error passed through, elapsed:", round(t.elapsed, 3))

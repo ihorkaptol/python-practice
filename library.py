@@ -263,6 +263,12 @@ class Member:
     def can_borrow(self):
         return self.items_left > 0
 
+    def to_dict(self):
+        return {
+            "member_id": self.member_id,
+            "name": self.name,
+            "borrowed": [item.item_id for item in self._borrowed_items]}
+
     def __str__(self):
         return f"{self.name} (items: {len(self.borrowed_items)}/{self.MAX_ITEMS})"
 
@@ -469,3 +475,6 @@ if __name__ == "__main__":
         item_from_dict({"type": "Comic", "item_id": "C1", "title": "X", "year": 2000})
     except StorageError as e:
         print(f"Error: {e}")
+
+    for member in lib.members:
+        print(member.to_dict())

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import date
 
+
 class LibraryError(Exception):
     pass
 
@@ -19,6 +20,7 @@ class LimitExceededError(LibraryError):
 
 class MemberNotFoundError(LibraryError):
     pass
+
 
 class StorageError(LibraryError):
     pass
@@ -65,7 +67,7 @@ class LibraryItem(ABC):
     def year(self, value):
         if not isinstance(value, int):
             raise TypeError(f'Year must be int, got {type(value).__name__}')
-        if  date.today().year < value or value < 1450:
+        if date.today().year < value or value < 1450:
             raise ValueError(f'Invalid year: {value}')
         self._year = value
 
@@ -89,10 +91,10 @@ class LibraryItem(ABC):
 
     def to_dict(self):
         return {
-            "type" : type(self).__name__,
-            "item_id" : self.item_id,
-            "title" : self.title,
-            "year" : self.year
+            "type": type(self).__name__,
+            "item_id": self.item_id,
+            "title": self.title,
+            "year": self.year
         }
 
     def __repr__(self):
@@ -173,6 +175,7 @@ class Magazine(LibraryItem):
             issue=data["issue"]
         )
 
+
 class DVD(LibraryItem):
 
     def __init__(self, item_id, title, year, duration_min, is_available=True):
@@ -198,6 +201,17 @@ class DVD(LibraryItem):
             year=data["year"],
             duration_min=data["duration_min"]
         )
+
+
+ITEM_TYPES = {"Book": Book, "Magazine": Magazine, "DVD": DVD}
+
+
+def item_from_dict(data):
+    type_name = data["type"]
+    if type_name not in ITEM_TYPES:
+        raise StorageError(f"Unknown item type: {type_name!r}")
+    item_class = ITEM_TYPES[type_name]
+    return item_class.from_dict(data)
 
 
 class Member:
@@ -306,7 +320,8 @@ class Library:
 
     def find_by_author(self, author):
         query = LibraryItem.normalize_text(author).lower()
-        return [item for item in self._items.values() if isinstance(item, Book) and LibraryItem.normalize_text(item.author).lower() == query]
+        return [item for item in self._items.values() if
+                isinstance(item, Book) and LibraryItem.normalize_text(item.author).lower() == query]
 
     def get_history(self):
         return "History:\n" + "\n".join(self._history)
@@ -322,7 +337,6 @@ class Library:
     @property
     def history(self):
         return tuple(self._history)
-
 
     def get_member(self, member_id):
         if member_id not in self._members:
@@ -352,10 +366,10 @@ if __name__ == "__main__":
     section("Setup")
     lib = Library("Central Library")
     BOOK_LINES = ["100; Kobzar ; Taras Shevchenko; 1840",
-                     "101;Zakhar Berkut;Ivan Franko;1883",
-                     "102;Lisova pisnia;Lesya Ukrainka;1911",
-                     "103;Tyhrolovy;Ivan Bahrianyi;1944",
-                     "105;Eneida;Ivan Kotliarevsky;1798"]
+                  "101;Zakhar Berkut;Ivan Franko;1883",
+                  "102;Lisova pisnia;Lesya Ukrainka;1911",
+                  "103;Tyhrolovy;Ivan Bahrianyi;1944",
+                  "105;Eneida;Ivan Kotliarevsky;1798"]
     for line in BOOK_LINES:
         lib.add_item(Book.from_string(line))
 
@@ -448,3 +462,10 @@ if __name__ == "__main__":
         original = lib.get_item(item_id)
         restored = type(original).from_dict(original.to_dict())
         print(repr(restored), restored == original, str(restored) == str(original))
+
+    copy_m1 = item_from_dict(lib.get_item("M1").to_dict())
+    print(copy_m1 == lib.get_item("M1"), repr(copy_m1))
+    try:
+        item_from_dict({"type": "Comic", "item_id": "C1", "title": "X", "year": 2000})
+    except StorageError as e:
+        print(f"Error: {e}")

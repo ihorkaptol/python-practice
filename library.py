@@ -84,6 +84,14 @@ class LibraryItem(ABC):
     def loan_days(self):
         pass
 
+    def to_dict(self):
+        return {
+            "type" : type(self).__name__,
+            "item_id" : self.item_id,
+            "title" : self.title,
+            "year" : self.year
+        }
+
     def __repr__(self):
         return f"{type(self).__name__}(item_id={self.item_id!r}, title={self.title!r})"
 
@@ -105,7 +113,6 @@ class Book(LibraryItem):
 
     def __init__(self, isbn, title, author, year, is_available=True):
         super().__init__(isbn, title, year, is_available)
-        self.isbn = isbn
         self.author = author
 
     def loan_days(self):
@@ -122,6 +129,11 @@ class Book(LibraryItem):
         isbn, title, author, year = parts
         return cls(int(isbn), title, author.strip(), int(year))
 
+    def to_dict(self):
+        data = super().to_dict()
+        data["author"] = self.author
+        return data
+
 
 class Magazine(LibraryItem):
 
@@ -135,6 +147,10 @@ class Magazine(LibraryItem):
     def __str__(self):
         return f"{self.title} #{self.issue} ({self.year})"
 
+    def to_dict(self):
+        data = super().to_dict()
+        data["issue"] = self.issue
+        return data
 
 class DVD(LibraryItem):
 
@@ -147,6 +163,11 @@ class DVD(LibraryItem):
 
     def __str__(self):
         return f"{self.title} [DVD, {self.duration_min} min] ({self.year})"
+
+    def to_dict(self):
+        data = super().to_dict()
+        data["duration_min"] = self.duration_min
+        return data
 
 
 class Member:
@@ -385,3 +406,7 @@ if __name__ == "__main__":
 
     section("History")
     print(lib.get_history())
+
+    section("Day 4: JSON")
+    print(lib.get_item(100).to_dict())
+    print(lib.get_item("D1").to_dict())

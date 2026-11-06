@@ -20,6 +20,9 @@ class LimitExceededError(LibraryError):
 class MemberNotFoundError(LibraryError):
     pass
 
+class StorageError(LibraryError):
+    pass
+
 
 class LibraryItem(ABC):
     total_created = 0
@@ -129,6 +132,15 @@ class Book(LibraryItem):
         isbn, title, author, year = parts
         return cls(int(isbn), title, author.strip(), int(year))
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            isbn=data["item_id"],
+            title=data["title"],
+            author=data["author"],
+            year=data["year"]
+        )
+
     def to_dict(self):
         data = super().to_dict()
         data["author"] = self.author
@@ -152,6 +164,15 @@ class Magazine(LibraryItem):
         data["issue"] = self.issue
         return data
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            item_id=data["item_id"],
+            title=data["title"],
+            year=data["year"],
+            issue=data["issue"]
+        )
+
 class DVD(LibraryItem):
 
     def __init__(self, item_id, title, year, duration_min, is_available=True):
@@ -168,6 +189,15 @@ class DVD(LibraryItem):
         data = super().to_dict()
         data["duration_min"] = self.duration_min
         return data
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            item_id=data["item_id"],
+            title=data["title"],
+            year=data["year"],
+            duration_min=data["duration_min"]
+        )
 
 
 class Member:
@@ -385,7 +415,7 @@ if __name__ == "__main__":
     print(lib.return_item(100, 200))
 
     section("Members")
-    for member in lib.members:  # було: lib.members.values()
+    for member in lib.members:
         print(member)
 
     section("Available (sorted by year, then title)")
@@ -400,9 +430,9 @@ if __name__ == "__main__":
 
     section("Magic methods")
     copy = Book(100, "Kobzar (copy)", "Taras Shevchenko", 1840)
-    print("Same item:", copy == lib.get_item(100))  # було: lib.items[100]
+    print("Same item:", copy == lib.get_item(100))
     print("In a set:", len({copy, lib.get_item(100)}))
-    print(repr(lib.get_item("M1")))  # було: lib.items["M1"]
+    print(repr(lib.get_item("M1")))
 
     section("History")
     print(lib.get_history())
@@ -410,3 +440,11 @@ if __name__ == "__main__":
     section("Day 4: JSON")
     print(lib.get_item(100).to_dict())
     print(lib.get_item("D1").to_dict())
+
+    book_copy = Book.from_dict(lib.get_item(100).to_dict())
+    print(repr(book_copy), book_copy.author, book_copy == lib.get_item(100))
+
+    for item_id in [100, "M1", "D1"]:
+        original = lib.get_item(item_id)
+        restored = type(original).from_dict(original.to_dict())
+        print(repr(restored), restored == original, str(restored) == str(original))

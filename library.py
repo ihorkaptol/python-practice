@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import date
+import json
 
 
 class LibraryError(Exception):
@@ -354,6 +355,16 @@ class Library:
             raise ItemNotFoundError(f"Item '{item_id}' not found")
         return self._items[item_id]
 
+    def to_dict(self):
+        return {"name": self.name,
+                "items": [item.to_dict() for item in self._items.values()],
+                "members": [member.to_dict() for member in self._members.values()],
+                "history": list(self._history)}
+
+    def save_json(self, path):
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(self.to_dict(), f, ensure_ascii=False, indent=2)
+
     def __str__(self):
         return f'Library "{self.name}": {len(self._items)} items, {len(self._members)} members'
 
@@ -478,3 +489,6 @@ if __name__ == "__main__":
 
     for member in lib.members:
         print(member.to_dict())
+    print(lib.to_dict()["items"][0])
+    print(lib.to_dict()["members"][0])
+    lib.save_json("library.json")

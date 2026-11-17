@@ -5,3 +5,5 @@ venv/
 .idea/
 .vscode/
 .env
+*.json
+catalog.csv

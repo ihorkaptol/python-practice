@@ -361,6 +361,28 @@ class Library:
                 "members": [member.to_dict() for member in self._members.values()],
                 "history": list(self._history)}
 
+    @classmethod
+    def from_dict(cls, data):
+        library = cls(data["name"])
+
+        for item_data in data["items"]:
+            item = item_from_dict(item_data)
+            library.add_item(item)
+
+        for member_data in data["members"]:
+            member = Member(member_data["member_id"], member_data["name"])
+            library.add_member(member)
+
+            for item_id in member_data["borrowed"]:
+                item = library.get_item(item_id)
+                item.check_out()
+                member.add_item(item)
+
+        library._history = list(data["history"])
+
+        return library
+
+
     def save_json(self, path):
         with open(path, "w", encoding="utf-8") as f:
             json.dump(self.to_dict(), f, ensure_ascii=False, indent=2)
@@ -492,3 +514,7 @@ if __name__ == "__main__":
     print(lib.to_dict()["items"][0])
     print(lib.to_dict()["members"][0])
     lib.save_json("library.json")
+
+    loaded = Library.from_dict(lib.to_dict())
+    print("loaded:", loaded)
+    print("available:", len(loaded.available_items()))

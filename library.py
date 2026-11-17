@@ -389,9 +389,19 @@ class Library:
 
     @classmethod
     def load_json(cls, path):
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return cls.from_dict(data)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return cls.from_dict(data)
+        except FileNotFoundError as e:
+            raise StorageError(f"File not found: {path}") from e
+        except json.JSONDecodeError as e:
+            raise StorageError(f"Invalid JSON in {path}: {e}") from e
+        except KeyError as e:
+            raise StorageError(f"Missing field {e.args[0]!r} in {path}") from e
+        except (ValueError, TypeError) as e:
+            raise StorageError(f"Invalid data in {path}: {e}") from e
+
 
     def __str__(self):
         return f'Library "{self.name}": {len(self._items)} items, {len(self._members)} members'
@@ -529,3 +539,24 @@ if __name__ == "__main__":
     loaded = Library.load_json("library.json")
     print("loaded:", loaded)
     print("available:", len(loaded.available_items()))
+
+
+    section("Day 4: bad files")
+    from pathlib import Path
+
+    Path("broken.json").write_text("{ broken", encoding="utf-8")
+    Path("bad_type.json").write_text(
+        '{"name": "X", "items": [{"type": "Comic", "item_id": "C1", "title": "X", "year": 2000}], '
+        '"members": [], "history": []}', encoding="utf-8")
+    Path("bad_year.json").write_text(
+        '{"name": "X", "items": [{"type": "Book", "item_id": 1, "title": "X", "author": "A", "year": 2150}], '
+        '"members": [], "history": []}', encoding="utf-8")
+    Path("bad_title.json").write_text(
+        '{"name": "X", "items": [{"type": "Book", "item_id": 1, "author": "A", "year": 2000}], '
+        '"members": [], "history": []}', encoding="utf-8")
+
+    for path in ["missing.json", "broken.json", "bad_type.json", "bad_year.json", "bad_title.json"]:
+        try:
+            Library.load_json(path)
+        except StorageError as e:
+            print(f"Error: {e} (cause: {type(e.__cause__).__name__})")

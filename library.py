@@ -387,6 +387,12 @@ class Library:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(self.to_dict(), f, ensure_ascii=False, indent=2)
 
+    @classmethod
+    def load_json(cls, path):
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return cls.from_dict(data)
+
     def __str__(self):
         return f'Library "{self.name}": {len(self._items)} items, {len(self._members)} members'
 
@@ -516,5 +522,10 @@ if __name__ == "__main__":
     lib.save_json("library.json")
 
     loaded = Library.from_dict(lib.to_dict())
+    print("loaded:", loaded)
+    print("available:", len(loaded.available_items()))
+
+    lib.save_json("library.json")
+    loaded = Library.load_json("library.json")
     print("loaded:", loaded)
     print("available:", len(loaded.available_items()))

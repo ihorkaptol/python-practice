@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import date
 import json
-
+from pathlib import Path
 
 class LibraryError(Exception):
     pass
@@ -541,9 +541,32 @@ if __name__ == "__main__":
     print("available:", len(loaded.available_items()))
 
 
-    section("Day 4: bad files")
-    from pathlib import Path
+    section("Day 4: JSON")
+    lib.save_json("library.json")
+    loaded = Library.load_json("library.json")
+    print(loaded)
+    print(len(loaded.available_items()), "available")
 
+    try:
+        loaded.lend_item("M1", 201)
+    except ItemNotAvailableError as e:
+        print(f"Error: {e}")
+
+    print(loaded.return_item("M1", 200))
+
+    loaded.save_json("library.json")
+    reloaded = Library.load_json("library.json")
+    print(reloaded.get_history())
+    print("History entries:", len(reloaded.history))
+
+    section("Day 4: checks")
+    print("ids keep types:", reloaded.get_item(100).item_id, repr(reloaded.get_item("M1").item_id))
+    reloaded.save_json("a.json")
+    Library.load_json("a.json").save_json("b.json")
+    same = Path("a.json").read_text(encoding="utf-8") == Path("b.json").read_text(encoding="utf-8")
+    print("save -> load -> save gives the same file:", same)
+
+    section("Day 4: bad files")
     Path("broken.json").write_text("{ broken", encoding="utf-8")
     Path("bad_type.json").write_text(
         '{"name": "X", "items": [{"type": "Comic", "item_id": "C1", "title": "X", "year": 2000}], '
